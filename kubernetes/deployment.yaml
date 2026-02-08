@@ -1,0 +1,468 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: freqtrade
+  labels:
+    name: freqtrade
+    app: trading-bot
+
+---
+# ConfigMap for environment variables
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: freqtrade-config
+  namespace: freqtrade
+data:
+  POSTGRES_USER: "freqtrade"
+  POSTGRES_DB: "freqtrade"
+  STAKE_CURRENCY: "USDT"
+  MAX_OPEN_TRADES: "5"
+  TZ: "UTC"
+  HYPEROPT_EPOCHS: "500"
+  HYPEROPT_MIN_TRADES: "100"
+
+---
+# Secrets (use external secret manager in production)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: freqtrade-secrets
+  namespace: freqtrade
+type: Opaque
+stringData:
+  postgres-password: "CHANGE_ME_freqtrade_password_123"
+  redis-password: "CHANGE_ME_redis_password_123"
+  exchange-api-key: "CHANGE_ME_your_exchange_api_key"
+  exchange-api-secret: "CHANGE_ME_your_exchange_secret"
+  telegram-bot-token: "CHANGE_ME_telegram_bot_token"
+  telegram-chat-id: "CHANGE_ME_telegram_chat_id"
+  grafana-password: "CHANGE_ME_grafana_password"
+
+---
+# PostgreSQL Persistent Volume
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: freqtrade
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: standard
+
+---
+# Redis Persistent Volume
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: freqtrade
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+# Freqtrade Data Persistent Volume
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: freqtrade-data-pvc
+  namespace: freqtrade
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: standard
+
+---
+# PostgreSQL Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: freqtrade
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: freqtrade-config
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: freqtrade-secrets
+              key: postgres-password
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: freqtrade-config
+              key: POSTGRES_DB
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - freqtrade
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - freqtrade
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+
+---
+# PostgreSQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: freqtrade
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+  type: ClusterIP
+
+---
+# Redis Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: freqtrade
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+          name: redis
+        command:
+        - redis-server
+        - --requirepass
+        - $(REDIS_PASSWORD)
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: freqtrade-secrets
+              key: redis-password
+        volumeMounts:
+        - name: redis-storage
+          mountPath: /data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: redis-storage
+        persistentVolumeClaim:
+          claimName: redis-pvc
+
+---
+# Redis Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: freqtrade
+spec:
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+  type: ClusterIP
+
+---
+# Freqtrade Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: freqtrade
+  namespace: freqtrade
+  labels:
+    app: freqtrade
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: freqtrade
+  template:
+    metadata:
+      labels:
+        app: freqtrade
+    spec:
+      containers:
+      - name: freqtrade
+        image: your-registry/freqtrade:latest  # Replace with your image
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: api
+        - containerPort: 8081
+          name: ui
+        env:
+        - name: EXCHANGE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: freqtrade-secrets
+              key: exchange-api-key
+        - name: EXCHANGE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: freqtrade-secrets
+              key: exchange-api-secret
+        - name: TELEGRAM_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: freqtrade-secrets
+              key: telegram-bot-token
+        - name: TELEGRAM_CHAT_ID
+          valueFrom:
+            secretKeyRef:
+              name: freqtrade-secrets
+              key: telegram-chat-id
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: freqtrade-secrets
+              key: postgres-password
+        - name: DATABASE_URL
+          value: "postgresql://freqtrade:$(POSTGRES_PASSWORD)@postgres:5432/freqtrade"
+        envFrom:
+        - configMapRef:
+            name: freqtrade-config
+        volumeMounts:
+        - name: freqtrade-data
+          mountPath: /freqtrade/user_data
+        - name: freqtrade-logs
+          mountPath: /freqtrade/logs
+        - name: hyperopt-results
+          mountPath: /freqtrade/hyperopt_results
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/ping
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /api/v1/ping
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: freqtrade-data
+        persistentVolumeClaim:
+          claimName: freqtrade-data-pvc
+      - name: freqtrade-logs
+        emptyDir: {}
+      - name: hyperopt-results
+        emptyDir: {}
+
+---
+# Freqtrade Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: freqtrade
+  namespace: freqtrade
+spec:
+  selector:
+    app: freqtrade
+  ports:
+  - name: api
+    port: 8080
+    targetPort: 8080
+  - name: ui
+    port: 8081
+    targetPort: 8081
+  type: ClusterIP
+
+---
+# Ingress for external access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: freqtrade-ingress
+  namespace: freqtrade
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  tls:
+  - hosts:
+    - freqtrade.yourdomain.com  # Change this
+    secretName: freqtrade-tls
+  rules:
+  - host: freqtrade.yourdomain.com  # Change this
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: freqtrade
+            port:
+              number: 8080
+
+---
+# CronJob for quarterly hyperopt
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hyperopt-quarterly
+  namespace: freqtrade
+spec:
+  # Runs on Jan 1, Apr 1, Jul 1, Oct 1 at 2 AM UTC
+  schedule: "0 2 1 1,4,7,10 *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: hyperopt
+            image: your-registry/freqtrade:latest
+            command: ["/freqtrade/scripts/run_hyperopt.sh"]
+            env:
+            - name: TELEGRAM_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: freqtrade-secrets
+                  key: telegram-bot-token
+            - name: TELEGRAM_CHAT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: freqtrade-secrets
+                  key: telegram-chat-id
+            volumeMounts:
+            - name: freqtrade-data
+              mountPath: /freqtrade/user_data
+            - name: hyperopt-results
+              mountPath: /freqtrade/hyperopt_results
+            resources:
+              requests:
+                memory: "4Gi"
+                cpu: "2000m"
+              limits:
+                memory: "8Gi"
+                cpu: "4000m"
+          restartPolicy: OnFailure
+          volumes:
+          - name: freqtrade-data
+            persistentVolumeClaim:
+              claimName: freqtrade-data-pvc
+          - name: hyperopt-results
+            emptyDir: {}
+
+---
+# Horizontal Pod Autoscaler (if needed)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: freqtrade-hpa
+  namespace: freqtrade
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: freqtrade
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

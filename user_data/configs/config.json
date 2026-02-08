@@ -1,0 +1,177 @@
+{
+  "max_open_trades": 3,
+  "stake_currency": "USDT",
+  "stake_amount": "unlimited",
+  "tradable_balance_ratio": 0.99,
+  "fiat_display_currency": "USD",
+  "dry_run": true,
+  "dry_run_wallet": 60,
+  "cancel_open_orders_on_exit": false,
+  "use_exit_signal": true,
+  "exit_profit_only": false,
+  "ignore_roi_if_entry_signal": false,
+  "unfilledtimeout": {
+    "entry": 10,
+    "exit": 10,
+    "exit_timeout_count": 0,
+    "unit": "minutes"
+  },
+  "entry_pricing": {
+    "price_side": "other",
+    "use_order_book": true,
+    "order_book_top": 1,
+    "price_last_balance": 0.0,
+    "check_depth_of_market": {
+      "enabled": false,
+      "bids_to_ask_delta": 1
+    }
+  },
+  "exit_pricing": {
+    "price_side": "other",
+    "use_order_book": true,
+    "order_book_top": 1
+  },
+  "exchange": {
+    "name": "binance",
+    "key": "",
+    "secret": "",
+    "ccxt_config": {
+      "enableRateLimit": true
+    },
+    "ccxt_async_config": {
+      "enableRateLimit": true,
+      "rateLimit": 200
+    },
+    "pair_whitelist": [
+    "PORTO/USDT",
+    "SANTOS/USDT",
+    "LAZIO/USDT",
+    "STG/USDT",
+    "ALPINE/USDT",
+    "XEC/USDT",
+    "LOKA/USDT",
+    "FORTH/USDT",
+    "KMD/USDT",
+    "REQ/USDT",
+    "DCR/USDT",
+    "LDO/USDT",
+    "XVG/USDT",
+    "PYR/USDT",
+    "DEXE/USDT",
+    "FIDA/USDT",
+    "POND/USDT",
+    "RLC/USDT",
+    "INJ/USDT",
+    "SPELL/USDT",
+    "MASK/USDT",
+    "LEVER/USDT",
+    "PSG/USDT",
+    "OP/USDT",
+    "RAD/USDT",
+    "FLUX/USDT",
+    "AMP/USDT",
+    "AVA/USDT",
+    "ASTR/USDT",
+    "REI/USDT",
+    "JUV/USDT",
+    "ASR/USDT",
+    "PUNDIX/USDT",
+    "LUNA/USDT",
+    "TRB/USDT",
+    "BAND/USDT",
+    "LTO/USDT",
+    "ACH/USDT",
+    "BSW/USDT",
+    "PERP/USDT",
+    "QI/USDT",
+    "OG/USDT",
+    "IDEX/USDT",
+    "PEOPLE/USDT",
+    "PHA/USDT",
+    "YGG/USDT",
+    "BIFI/USDT",
+    "RIF/USDT",
+    "ACA/USDT",
+    "PHB/USDT",
+    "COS/USDT"
+    ]
+  },
+  "pairlists": [
+    {
+      "method": "StaticPairList"
+    },
+
+    {
+      "method": "ShuffleFilter",
+      "seed": 42
+    }
+  ],
+  "edge": {
+    "enabled": false,
+    "process_throttle_secs": 3600,
+    "calculate_since_number_of_days": 14,
+    "allowed_risk": 0.01,
+    "stoploss_range_min": -0.01,
+    "stoploss_range_max": -0.1,
+    "stoploss_range_step": -0.01,
+    "minimum_winrate": 0.60,
+    "minimum_expectancy": 0.20,
+    "min_trade_number": 10,
+    "max_trade_duration_minute": 1440,
+    "remove_pumps": false
+  },
+  "telegram": {
+    "enabled": false,
+    "token": "1872989776:AAEEdPRdailWyR6H2Db36KKg3T1YRcXL8V0",
+    "chat_id": "1445730556",
+    "keyboard": [
+      [
+        "/daily",
+        "/stats",
+        "/balance",
+        "/profit"
+      ],
+      [
+        "/status table",
+        "/performance",
+        "/whitelist"
+      ],
+      [
+        "/reload_config",
+        "/count",
+        "/logs"
+      ]
+    ],
+    "notification_settings": {
+      "status": "silent",
+      "warning": "on",
+      "startup": "silent",
+      "entry": "off",
+      "exit": "off",
+      "entry_cancel": "silent",
+      "exit_cancel": "silent",
+      "entry_fill": "silent",
+      "exit_fill": "silent",
+      "protection_trigger": "silent",
+      "protection_trigger_global": "silent"
+    },
+    "reload": true,
+    "balance_dust_level": 0.01
+  },
+  "api_server": {
+    "enabled": false,
+    "listen_ip_address": "0.0.0.0",
+    "listen_port": 8080,
+    "verbosity": "info",
+    "jwt_secret_key": "somethingrandom",
+    "CORS_origins": [],
+    "username": "",
+    "password": ""
+  },
+  "bot_name": "freqtrade",
+  "initial_state": "running",
+  "force_entry_enable": false,
+  "internals": {
+    "process_throttle_secs": 5
+  }
+}

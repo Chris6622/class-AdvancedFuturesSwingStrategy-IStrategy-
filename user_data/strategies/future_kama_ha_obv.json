@@ -1,0 +1,34 @@
+{
+  "strategy_name": "FutureKamaHaObv",
+  "params": {
+    "max_open_trades": {
+      "max_open_trades": 6
+    },
+    "buy": {
+      "buy_kama_period": 37,
+      "buy_obv_sma_period": 12
+    },
+    "sell": {
+      "sell_kama_period": 29,
+      "sell_obv_sma_period": 18
+    },
+    "protection": {},
+    "roi": {
+      "0": 0.168,
+      "103": 0.099,
+      "273": 0.036,
+      "467": 0
+    },
+    "stoploss": {
+      "stoploss": -0.309
+    },
+    "trailing": {
+      "trailing_stop": true,
+      "trailing_stop_positive": 0.182,
+      "trailing_stop_positive_offset": 0.25,
+      "trailing_only_offset_is_reached": true
+    }
+  },
+  "ft_stratparam_v": 1,
+  "export_time": "2025-08-10 20:23:03.477208+00:00"
+}

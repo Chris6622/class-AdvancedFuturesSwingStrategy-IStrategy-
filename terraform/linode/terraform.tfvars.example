@@ -1,0 +1,32 @@
+# Terraform variables for Linode deployment
+
+# Required: Get your token from https://cloud.linode.com/profile/tokens
+linode_token = "YOUR_LINODE_API_TOKEN_HERE"
+
+# Region selection
+# Available regions:
+# - us-east (Newark, NJ)
+# - us-central (Dallas, TX)
+# - us-west (Fremont, CA)
+# - us-southeast (Atlanta, GA)
+# - ca-central (Toronto, Canada)
+# - eu-central (Frankfurt, Germany)
+# - eu-west (London, UK)
+# - ap-south (Singapore)
+# - ap-northeast (Tokyo, Japan)
+# - ap-west (Mumbai, India)
+# - ap-southeast (Sydney, Australia)
+region = "us-east"
+
+# Cluster configuration
+cluster_name = "freqtrade-cluster"
+k8s_version  = "1.28"
+environment  = "production"
+
+# Database credentials (change these!)
+db_password    = "CHANGE_ME_secure_db_password_123"
+redis_password = "CHANGE_ME_secure_redis_password_123"
+
+# Optional: SSL certificates (or use cert-manager)
+# ssl_cert = file("${path.module}/certs/fullchain.pem")
+# ssl_key  = file("${path.module}/certs/privkey.pem")
